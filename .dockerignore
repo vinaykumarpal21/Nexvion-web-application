@@ -1,0 +1,9 @@
+.git
+.gitignore
+Jenkinsfile
+deploy
+docker-compose.yml
+README*.md
+README.txt
+Dockerfile
+.dockerignore

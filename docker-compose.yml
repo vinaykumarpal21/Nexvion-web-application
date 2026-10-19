@@ -1,0 +1,22 @@
+services:
+  web:
+    image: ${IMAGE_NAME:-nexvion-web}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexvion-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - nexvion_logs:/var/log/nginx      # persistent nginx logs
+    networks:
+      - nexvion_net
+
+volumes:
+  nexvion_logs:
+    name: nexvion_logs
+
+networks:
+  nexvion_net:
+    name: nexvion_net
