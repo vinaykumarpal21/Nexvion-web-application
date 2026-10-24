@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -5,6 +6,10 @@ pipeline {
         IMAGE_NAME     = "static-web-app"
         IMAGE_TAG      = "${env.BUILD_NUMBER}"
         CONTAINER_NAME = "my-static-app"
+
+        DOCKER_HUB_USER = "YOUR_DOCKERHUB_USERNAME"
+        EC2_USER        = "ubuntu"
+        EC2_PUBLIC_IP   = "YOUR_EC2_PUBLIC_IP"
     }
 
     options {
@@ -14,7 +19,7 @@ pipeline {
     }
 
     triggers {
-        githubPush()   // GitHub webhook se push hote hi auto build
+        githubPush()
     }
 
     stages {
@@ -26,44 +31,107 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .'
+                sh '''
+                    docker build \
+                      -t $IMAGE_NAME:$IMAGE_TAG \
+                      -t $IMAGE_NAME:latest .
+                '''
             }
         }
 
-        stage('Run Container') {
+        stage('Push to Docker Hub') {
             steps {
-                sh 'docker stop $CONTAINER_NAME || true'
-                sh 'docker rm $CONTAINER_NAME || true'
-                sh 'docker run -d --name $CONTAINER_NAME -p 80:80 -v nexvion_logs:/var/log/nginx --restart unless-stopped $IMAGE_NAME:latest'
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DH_USER',
+                        passwordVariable: 'DH_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DH_PASSWORD" | docker login \
+                          -u "$DH_USER" --password-stdin
+
+                        docker tag $IMAGE_NAME:latest \
+                          $DOCKER_HUB_USER/nexvion-web:latest
+
+                        docker push $DOCKER_HUB_USER/nexvion-web:latest
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=accept-new \
+                          $EC2_USER@$EC2_PUBLIC_IP "
+                            # 1. Purana container stop aur remove karein
+                            docker stop my-static-app || true
+                            docker rm my-static-app || true
+
+                            # 2. Docker Hub se nayi image pull karein
+                            docker pull $DOCKER_HUB_USER/nexvion-web:latest
+
+                            # 3. Naya container run karein
+                            docker run -d \
+                              -p 80:80 \
+                              --name my-static-app \
+                              -v nexvion_logs:/var/log/nginx \
+                              --restart unless-stopped \
+                              $DOCKER_HUB_USER/nexvion-web:latest
+                        "
+                    '''
+                }
             }
         }
 
         stage('Show Status') {
             steps {
-                sh 'docker ps --filter name=$CONTAINER_NAME'
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=accept-new \
+                          $EC2_USER@$EC2_PUBLIC_IP \
+                          "docker ps --filter name=my-static-app"
+                    '''
+                }
             }
         }
 
         stage('Cleanup Old Images') {
             steps {
-                sh 'docker image prune -f'
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=accept-new \
+                          $EC2_USER@$EC2_PUBLIC_IP \
+                          "docker image prune -f"
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo "SUCCESS: Build #${env.BUILD_NUMBER} deploy ho gaya. Website live hai (EC2 IP, port 80)."
+            echo "SUCCESS: Build #${env.BUILD_NUMBER} EC2 par deploy ho gaya."
+            echo "Website: http://${env.EC2_PUBLIC_IP}"
         }
+
         failure {
             echo "FAILED: Build #${env.BUILD_NUMBER} fail ho gaya. Console Output check karo."
         }
+
         unstable {
             echo "UNSTABLE: Build #${env.BUILD_NUMBER} unstable hai."
         }
+
         aborted {
-            echo "ABORTED: Build #${env.BUILD_NUMBER} beech me rok diya gaya."
+            echo "ABORTED: Build #${env.BUILD_NUMBER} beech mein rok diya gaya."
         }
+
         always {
             echo "Pipeline khatam hui. Result: ${currentBuild.currentResult}"
         }
