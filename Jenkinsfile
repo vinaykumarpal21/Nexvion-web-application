@@ -7,7 +7,7 @@ pipeline {
         IMAGE_TAG      = "${env.BUILD_NUMBER}"
         CONTAINER_NAME = "my-static-app"
 
-        DOCKER_HUB_USER = "YOUR_DOCKERHUB_USERNAME"
+        DOCKER_HUB_USER = "vinaykumarpal"
         EC2_USER        = "ubuntu"
         EC2_PUBLIC_IP   = "YOUR_EC2_PUBLIC_IP"
     }
