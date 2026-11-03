@@ -9,7 +9,7 @@ pipeline {
 
         DOCKER_HUB_USER = "vinaykumarpal"
         EC2_USER        = "ubuntu"
-        EC2_PUBLIC_IP   = "YOUR_EC2_PUBLIC_IP"
+        EC2_PUBLIC_IP   = "3.107.9.233"
     }
 
     options {
@@ -65,7 +65,7 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                sshagent(credentials: ['ec2-ssh-key']) {
+                sshagent(credentials: ['3.107.9.233']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP "
@@ -91,7 +91,7 @@ pipeline {
 
         stage('Show Status') {
             steps {
-                sshagent(credentials: ['ec2-ssh-key']) {
+                sshagent(credentials: ['3.107.9.233']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP \
@@ -103,7 +103,7 @@ pipeline {
 
         stage('Cleanup Old Images') {
             steps {
-                sshagent(credentials: ['ec2-ssh-key']) {
+                sshagent(credentials: ['3.107.9.233']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP \
