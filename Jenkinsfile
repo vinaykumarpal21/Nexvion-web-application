@@ -65,7 +65,7 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                sshagent(credentials: ['3.107.9.233']) {
+                sshagent(credentials: ['ec2-deploy-key']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP "
@@ -91,7 +91,7 @@ pipeline {
 
         stage('Show Status') {
             steps {
-                sshagent(credentials: ['3.107.9.233']) {
+                sshagent(credentials: ['ec2-deploy-key']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP \
@@ -103,7 +103,7 @@ pipeline {
 
         stage('Cleanup Old Images') {
             steps {
-                sshagent(credentials: ['3.107.9.233']) {
+                sshagent(credentials: ['ec2-deploy-key']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP \
