@@ -69,14 +69,14 @@ pipeline {
                     sh '''
                         ssh -o StrictHostKeyChecking=accept-new \
                           $EC2_USER@$EC2_PUBLIC_IP "
-                            # 1. Purana container stop aur remove karein
+                            # 1. All container stop and remove
                             docker stop my-static-app || true
                             docker rm my-static-app || true
 
-                            # 2. Docker Hub se nayi image pull karein
+                            # 2. Pull new image from Docker Hub
                             docker pull $DOCKER_HUB_USER/nexvion-web:latest
 
-                            # 3. Naya container run karein
+                            # 3. Run new container
                             docker run -d \
                               -p 80:80 \
                               --name my-static-app \
